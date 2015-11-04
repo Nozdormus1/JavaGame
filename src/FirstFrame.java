@@ -4,6 +4,8 @@ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 
 import java.awt.image.*;
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
@@ -348,13 +350,14 @@ public class FirstFrame extends JFrame implements Runnable, KeyListener, MouseLi
 	
 	public static void sendMessage(Socket s, double[] myMessageArray) throws IOException{
 		OutputStream os = s.getOutputStream();
-		ObjectOutputStream oos = new ObjectOutputStream(os);
+		ObjectOutputStream oos = new ObjectOutputStream(new BufferedOutputStream(os));
 		oos.writeObject(myMessageArray);
+		oos.flush();
 	}
 	
 	public static double[] getMessage(Socket s) throws IOException, ClassNotFoundException{
 		InputStream is = s.getInputStream();
-		ObjectInputStream ois = new ObjectInputStream(is);
+		ObjectInputStream ois = new ObjectInputStream(new BufferedInputStream(is));
 		double[] myMessageArray = (double[]) ois.readObject();
 		return myMessageArray;
 	}
