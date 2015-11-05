@@ -23,7 +23,7 @@ public class FirstFrame extends JFrame implements Runnable, KeyListener, MouseLi
 	private JPanel contentPane;
 	private JTextField textField;
 	private JTextField textField_1;
-	private Thread thread = new Thread(this, "FirstFrame");;
+	private Thread thread = new Thread(this, "FirstFrame");
 	
 	private String ip = "localhost";
 	private int port = 22222;
@@ -34,19 +34,22 @@ public class FirstFrame extends JFrame implements Runnable, KeyListener, MouseLi
 	private BufferedImage image;
 	private Graphics2D g;
 	
-	private ServerSocket serverSocket;
+	public static ServerSocket serverSocket;
 	
 	public static int WIDTH = 536;
 	public static int HEIGHT = 418;
+	public static int mouseX;
+	public static int mouseY;
 	
 	public static Player player;
 	public static ArrayList<Fireball> fireballs;
+	public static ArrayList<Socket> sockets;
 	
 	private int FPS = 30;
 	private double averageFPS;
 	
-	private double[] enemyarray = new double[4];
-	private double[] myarray = new double[4];
+	private double[] enemyarray = new double[6];
+	private double[] myarray = new double[6];
 	private int error = 0;
 	private double deg;
 	private double check;
@@ -143,20 +146,20 @@ public class FirstFrame extends JFrame implements Runnable, KeyListener, MouseLi
 		
 		player = new Player();
 		fireballs = new ArrayList<Fireball>();
+		sockets = new ArrayList<Socket>();
 		
 		radius = player.getR();
 		
 			
 		if(server == true){
-		try {
+			try {
 				socket = serverSocket.accept();
-			} catch (UnknownHostException e1) {
+				sockets.add(socket);
+			} catch (IOException e) {
 				// TODO Auto-generated catch block
-				e1.printStackTrace();
-			} catch (IOException e1) {
-				// TODO Auto-generated catch block
-				e1.printStackTrace();
+				e.printStackTrace();
 			}
+			(new Thread(new ServerAccept())).start();
 		}
 		
 		contentPane.removeAll();
@@ -164,14 +167,24 @@ public class FirstFrame extends JFrame implements Runnable, KeyListener, MouseLi
 		
 		image = new BufferedImage(535, 417, BufferedImage.TYPE_INT_RGB);
 		g = (Graphics2D) image.getGraphics();
-		
 		while(true){
+			//for(int j = 0; j < sockets.size(); j++){
 			startTime = System.nanoTime();
-			
-			gameUpdate();
-			gameRender();
+			g.setColor(Color.WHITE);
+			g.fillRect(0, 0, WIDTH, HEIGHT);
+			if(server == true){
+			for(int j = 0; j < sockets.size(); j++){
+				gameUpdate(sockets.get(j));
+				gameRender();
+			}
+			} else{
+					gameUpdate(socket);
+					gameRender();
+			}
+			for(int i = 0; i < fireballs.size(); i++ ){
+				fireballs.get(i).draw(g);
+				}
 			gameDrow();
-			
 			if(error >= 20){
 				JOptionPane.showMessageDialog(null, "Your opponent has left!");
 				break;
@@ -194,22 +207,24 @@ public class FirstFrame extends JFrame implements Runnable, KeyListener, MouseLi
 				totalTime = 0;
 			}
 		}
+		//}
 	}
 	
-	private void gameUpdate(){
+	private void gameUpdate(Socket s){
 		player.update();
 		myarray[0] = player.getX();
 		myarray[1] = player.getY();
 		myarray[2] = deg;
 		myarray[3] = check;
+		myarray[4] = player.getMultiDetector();
 		try {
-			sendMessage(socket, myarray);
+			sendMessage(s, myarray);
 			} catch (IOException e){
 				System.out.println("null2");
 				error++;
 			}
 		try {
-			enemyarray = getMessage(socket);
+			enemyarray = getMessage(s);
 			} catch (IOException e){ 
 				System.out.println("null"); 
 			} catch (ClassNotFoundException e) {
@@ -218,7 +233,7 @@ public class FirstFrame extends JFrame implements Runnable, KeyListener, MouseLi
 		if((int) enemyarray[3] == 1){
 			long elapsed = (System.nanoTime() - firingTimer) / 1000000;
 			if(elapsed > firingDelay){
-				fireballs.add(new Fireball(enemyarray[2], (int) enemyarray[0], (int) enemyarray[1]));
+				fireballs.add(new Fireball(enemyarray[2], (int) enemyarray[0], (int) enemyarray[1], Color.RED));
 				firingTimer = System.nanoTime();
 			}
 		}
@@ -263,8 +278,8 @@ public class FirstFrame extends JFrame implements Runnable, KeyListener, MouseLi
 		}
 	
 	private void gameRender(){
-		g.setColor(Color.WHITE);
-		g.fillRect(0, 0, WIDTH, HEIGHT);
+		//g.setColor(Color.WHITE);
+		//g.fillRect(0, 0, WIDTH, HEIGHT);
 		g.setColor(Color.BLACK);
 		g.drawString("FPS: " + averageFPS, 100, 100);
 		g.drawString("Your score: " + score, 100, 120);
@@ -272,7 +287,11 @@ public class FirstFrame extends JFrame implements Runnable, KeyListener, MouseLi
 		
 		player.Draw(g);
 		try {
-			g.setColor(Color.RED);
+			if((int) enemyarray[4] == 0){
+				g.setColor(Color.RED);
+			} else{
+				g.setColor(Color.YELLOW);
+			}
 			g.fillOval((int) enemyarray[0] - radius, (int) enemyarray[1] - radius, 2*radius, 2*radius);
 		
 			g.setStroke(new BasicStroke(3));
@@ -284,10 +303,11 @@ public class FirstFrame extends JFrame implements Runnable, KeyListener, MouseLi
 			}
 		for(int i = 0; i < fireballs.size(); i++ ){
 			fireballs.get(i).draw(g);
-			}
+		}
 	}
 	
 	private void gameDrow(){
+		
 		Graphics g2 = this.getGraphics();
 		g2.drawImage(image, 0, 0, null);
 		g2.dispose();
@@ -308,12 +328,20 @@ public class FirstFrame extends JFrame implements Runnable, KeyListener, MouseLi
 			check = 1;
 			player.setFiring(true);
 		}
+		if(keyCode == MouseEvent.BUTTON3){
+			mouseX = (int) key.getPoint().getX();
+			mouseY = (int) key.getPoint().getY();
+			player.setTeleporting(true);
+		}
 	}
 	public void mouseReleased(MouseEvent key){
 		int keyCode = key.getButton();
 		if(keyCode == MouseEvent.BUTTON1){
 			check = 0;
 			player.setFiring(false);
+		}
+		if(keyCode == MouseEvent.BUTTON3){
+			player.setTeleporting(false);
 		}
 	}
 	public void keyTyped(KeyEvent key){}
@@ -361,6 +389,7 @@ public class FirstFrame extends JFrame implements Runnable, KeyListener, MouseLi
 		double[] myMessageArray = (double[]) ois.readObject();
 		return myMessageArray;
 	}
+	
 	
 	private boolean connect() {
 		try {

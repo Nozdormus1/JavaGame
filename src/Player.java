@@ -9,11 +9,17 @@ public class Player {
 	private int dy;
 	private int speed;
 	private int health;
+	private int multiDetector;
 	
 	private boolean firing;
+	private boolean teleporting;
 	private boolean dead;
+	private boolean cdDetector;
 	private long firingTimer;
 	private long firingDelay;
+	private long teleportingTimer;
+	private long teleportingDelay;
+	private long elapsedTele;
 	
 	private boolean left;
 	private boolean right;
@@ -26,20 +32,21 @@ public class Player {
 	private double angleFromMouse;
 	
 	public Player(){
-		x = FirstFrame.WIDTH / 2;
-		y = FirstFrame.HEIGHT / 2;
+		x = (int)(Math.random() * 526) + 5; //FirstFrame.WIDTH / 2; 
+		y = (int)(Math.random() * 387) + 26; //FirstFrame.HEIGHT / 2;
 		r = 10;
 		
 		dx =0;
 		dy =0;
 		speed = 5;
+		multiDetector = 0;
 		
 		color1 = Color.BLUE;
-		color2 = Color.RED;
-		
+		color2 = Color.YELLOW;
 		firing = false;
-		firingTimer = System.nanoTime();
+		teleporting = false;
 		firingDelay = 200;
+		teleportingDelay = 10000;
 		
 		health = 1;
 		dead = false;
@@ -52,6 +59,7 @@ public class Player {
 	public void setDown(boolean b){down = b;}
 	
 	public void setFiring(boolean b){ firing = b;}
+	public void setTeleporting(boolean b){ teleporting = b;}
 	
 	public void setAngleFromMouse(double a){ angleFromMouse = a;}
 	
@@ -81,14 +89,33 @@ public class Player {
 		if(firing) {
 			long elapsed = (System.nanoTime() - firingTimer) / 1000000;
 			if(elapsed > firingDelay){
-				FirstFrame.fireballs.add(new Fireball(angleFromMouse, x, y));
+				FirstFrame.fireballs.add(new Fireball(angleFromMouse, x, y, Color.BLUE));
 				firingTimer = System.nanoTime();
 			}
+		}
+		if(teleporting){
+			elapsedTele = (System.nanoTime() - teleportingTimer) / 1000000;
+			if(elapsedTele > teleportingDelay){
+				teleport(FirstFrame.mouseX, FirstFrame.mouseY);
+				teleportingTimer = System.nanoTime();
+				cdDetector = true;
+				multiDetector = 1;
+			}
+		}
+		elapsedTele = (System.nanoTime() - teleportingTimer) / 1000000;
+		if(elapsedTele > teleportingDelay){
+			cdDetector = false;
+			multiDetector = 0;
 		}
 	}
 	
 	public boolean isDead(){
 		return dead;
+	}
+	
+	public void teleport(int x, int y){
+		this.x = x;
+		this.y = y;
 	}
 	
 	public void hit(){
@@ -110,8 +137,16 @@ public class Player {
 		return r;
 	}
 	
+	public int getMultiDetector(){
+		return multiDetector;
+	}
+	
 	public void Draw(Graphics2D g){
-		g.setColor(color1);
+		if(!cdDetector){
+			g.setColor(color1);
+		} else{
+			g.setColor(color2);
+		}
 		g.fillOval(x - r, y - r, 2*r, 2*r);
 		
 		g.setStroke(new BasicStroke(3));

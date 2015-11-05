@@ -13,7 +13,7 @@ public class Fireball {
 	
 	private Color color1;
 	
-	public Fireball(double angle, int x, int y){
+	public Fireball(double angle, int x, int y, Color color){
 		this.x = x;
 		this.y = y;
 		r = 2;
@@ -23,7 +23,7 @@ public class Fireball {
 		dx = Math.cos(rad)*speed;
 		dy = Math.sin(rad)*speed;
 		
-		color1 = Color.RED;
+		color1 = color;
 		
 	}
 	
