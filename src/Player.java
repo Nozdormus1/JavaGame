@@ -35,8 +35,8 @@ public class Player {
 	private double angleFromMouse;
 	
 	public Player(){
-		x = (int)(Math.random() * 526) + 5; //FirstFrame.WIDTH / 2; 
-		y = (int)(Math.random() * 387) + 26; //FirstFrame.HEIGHT / 2;
+		x = (int)(Math.random() * (FirstFrame.WIDTH-10)) + 5; //FirstFrame.WIDTH / 2; 
+		y = (int)(Math.random() * (FirstFrame.HEIGHT-30)) + 26; //FirstFrame.HEIGHT / 2;
 		r = 10;
 		
 		dx =0;
@@ -144,8 +144,16 @@ public class Player {
 		return x;
 	}
 	
+	public void setX(int x){
+		this.x = x;
+	}
+	
 	public int getY(){
 		return y;
+	}
+	
+	public void setY(int y){
+		this.y = y;
 	}
 	
 	public int getR(){

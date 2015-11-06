@@ -245,19 +245,25 @@ public class FirstFrame extends JFrame implements Runnable, KeyListener, MouseLi
 			gameUpdatePart2();
 			gameRender();
 			
+			if(clientInfoSend.isDead()) {
+				long elapsedDeath = (System.nanoTime() - deathTimer) / 1000000;
+				g.setColor(Color.RED);
+				g.setFont(new Font("default", Font.PLAIN, 11));
+				g.drawString("Reviving in:" + elapsedDeath, 100, 140);
+				if(elapsedDeath > deathDelay){
+					player.setX((int)(Math.random() * (FirstFrame.WIDTH-10)) + 5);
+					player.setY((int)(Math.random() * (FirstFrame.HEIGHT-30)) + 26);
+					clientInfoSend.setDead(false);
+					deathTimer = System.nanoTime();
+				}
+			}
+			
 			gameDrow();
 			
 			//if(error >= 20){
 			//	JOptionPane.showMessageDialog(null, "Your opponent has left!");
 			//	break;
 			//}
-			if(clientInfoSend.isDead()) {
-				long elapsedDeath = (System.nanoTime() - deathTimer) / 1000000;
-				if(elapsedDeath > deathDelay){
-					clientInfoSend.setDead(false);
-					deathTimer = System.nanoTime();
-				}
-			}
 			
 			
 			URDTimeMillis = (System.nanoTime() - startTime) / 1000000;
@@ -334,7 +340,6 @@ public class FirstFrame extends JFrame implements Runnable, KeyListener, MouseLi
 		}
 	
 	private void gameUpdatePart1(){
-		
 		for(int j = 0; j < clientInfosGet.size(); j++ ){
 			if((int) clientInfosGet.get(j).getCheckShot() == 1){
 				long elapsed = (System.nanoTime() - firingTimer) / 1000000;
