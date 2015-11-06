@@ -8,12 +8,14 @@ public class ServerAccept implements Runnable {
 	@Override
 	public void run() {
 		// TODO Auto-generated method stub
-		try {
-			socket = FirstFrame.serverSocket.accept();
-			FirstFrame.sockets.add(socket);
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+		while(true){
+			try {
+				socket = FirstFrame.serverSocket.accept();
+				FirstFrame.sockets.add(socket);
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 	}
 

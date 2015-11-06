@@ -23,6 +23,7 @@ public class FirstFrame extends JFrame implements Runnable, KeyListener, MouseLi
 	private JPanel contentPane;
 	private JTextField textField;
 	private JTextField textField_1;
+	private JTextField textField_2;
 	private Thread thread = new Thread(this, "FirstFrame");
 	
 	private String ip = "localhost";
@@ -36,28 +37,35 @@ public class FirstFrame extends JFrame implements Runnable, KeyListener, MouseLi
 	
 	public static ServerSocket serverSocket;
 	
-	public static int WIDTH = 536;
-	public static int HEIGHT = 418;
+	public static int WIDTH = 736;
+	public static int HEIGHT = 618;
 	public static int mouseX;
 	public static int mouseY;
 	
 	public static Player player;
 	public static ArrayList<Fireball> fireballs;
 	public static ArrayList<Socket> sockets;
+	private ClientInfo clientInfoSend;
+	private ClientInfo clientInfoGet;
+	private ArrayList<ClientInfo> clientInfosSend;
+	private ArrayList<ClientInfo> clientInfosGet;
+	private ArrayList<ClientInfo> clientInfosMail;
 	
 	private int FPS = 30;
 	private double averageFPS;
 	
-	private double[] enemyarray = new double[6];
-	private double[] myarray = new double[6];
 	private int error = 0;
 	private double deg;
 	private double check;
+	private int multiShotCheck;
 	private long firingTimer = System.nanoTime();
 	private long firingDelay = 200;
+	private long multiShotTimer = System.nanoTime();
+	private long multiShotDelay = 5000;
 	private int score;
 	private int escore;
 	private int radius;
+	private String nickname;
 
 
 	/**
@@ -74,14 +82,14 @@ public class FirstFrame extends JFrame implements Runnable, KeyListener, MouseLi
 		textField = new JTextField();
 		textField.setHorizontalAlignment(SwingConstants.CENTER);
 		textField.setFont(new Font("Tahoma", Font.BOLD, 30));
-		textField.setBounds(81, 69, 357, 60);
+		textField.setBounds(199, 100, 357, 60);
 		contentPane.add(textField);
 		textField.setColumns(10);
 		
 		textField_1 = new JTextField();
 		textField_1.setHorizontalAlignment(SwingConstants.CENTER);
 		textField_1.setFont(new Font("Tahoma", Font.BOLD, 30));
-		textField_1.setBounds(81, 183, 357, 60);
+		textField_1.setBounds(199, 214, 357, 60);
 		contentPane.add(textField_1);
 		textField_1.setColumns(10);
 		
@@ -89,6 +97,10 @@ public class FirstFrame extends JFrame implements Runnable, KeyListener, MouseLi
 		btnNewButton.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
 				ip = textField.getText();
+				nickname = textField_2.getText();
+				if(nickname == null){
+					JOptionPane.showMessageDialog(null, "enter a nickname"); 
+				}
 				try{ 
 					port = Integer.parseInt(textField_1.getText());
 				} catch(Exception e){
@@ -104,20 +116,33 @@ public class FirstFrame extends JFrame implements Runnable, KeyListener, MouseLi
 			}
 		});
 		btnNewButton.setFont(new Font("Tahoma", Font.BOLD, 33));
-		btnNewButton.setBounds(81, 283, 357, 70);
+		btnNewButton.setBounds(199, 430, 357, 70);
 		contentPane.add(btnNewButton);
 		
 		JLabel lblNewLabel = new JLabel("Enter IP adress");
 		lblNewLabel.setHorizontalAlignment(SwingConstants.CENTER);
 		lblNewLabel.setFont(new Font("Tahoma", Font.BOLD, 36));
-		lblNewLabel.setBounds(81, 11, 357, 48);
+		lblNewLabel.setBounds(199, 41, 357, 48);
 		contentPane.add(lblNewLabel);
 		
 		JLabel lblNewLabel_1 = new JLabel("Enter Port number");
 		lblNewLabel_1.setFont(new Font("Tahoma", Font.BOLD, 29));
 		lblNewLabel_1.setHorizontalAlignment(SwingConstants.CENTER);
-		lblNewLabel_1.setBounds(91, 140, 348, 32);
+		lblNewLabel_1.setBounds(209, 171, 348, 32);
 		contentPane.add(lblNewLabel_1);
+		
+		textField_2 = new JTextField();
+		textField_2.setHorizontalAlignment(SwingConstants.CENTER);
+		textField_2.setFont(new Font("Tahoma", Font.BOLD, 30));
+		textField_2.setBounds(199, 332, 357, 60);
+		contentPane.add(textField_2);
+		textField_2.setColumns(10);
+		
+		JLabel lblNewLabel_2 = new JLabel("Enter your nickname");
+		lblNewLabel_2.setHorizontalAlignment(SwingConstants.CENTER);
+		lblNewLabel_2.setFont(new Font("Tahoma", Font.BOLD, 29));
+		lblNewLabel_2.setBounds(199, 285, 357, 36);
+		contentPane.add(lblNewLabel_2);
 		
 		this.setFocusable(true);
 		this.requestFocus();
@@ -130,7 +155,7 @@ public class FirstFrame extends JFrame implements Runnable, KeyListener, MouseLi
 		JLabel lblNewLabel_3 = new JLabel("Waiting for Player 2 ...");
 		lblNewLabel_3.setFont(new Font("Tahoma", Font.BOLD, 29));
 		lblNewLabel_3.setHorizontalAlignment(SwingConstants.CENTER);
-		lblNewLabel_3.setBounds(91, 140, 348, 32);
+		lblNewLabel_3.setBounds(199, 214, 357, 60);
 		contentPane.add(lblNewLabel_3);
 		contentPane.repaint();
 
@@ -147,10 +172,11 @@ public class FirstFrame extends JFrame implements Runnable, KeyListener, MouseLi
 		player = new Player();
 		fireballs = new ArrayList<Fireball>();
 		sockets = new ArrayList<Socket>();
+		clientInfoGet = new ClientInfo();
+		clientInfoSend = new ClientInfo();
 		
 		radius = player.getR();
 		
-			
 		if(server == true){
 			try {
 				socket = serverSocket.accept();
@@ -165,30 +191,64 @@ public class FirstFrame extends JFrame implements Runnable, KeyListener, MouseLi
 		contentPane.removeAll();
 		contentPane.repaint();
 		
-		image = new BufferedImage(535, 417, BufferedImage.TYPE_INT_RGB);
+		image = new BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_RGB);
 		g = (Graphics2D) image.getGraphics();
+		
 		while(true){
-			//for(int j = 0; j < sockets.size(); j++){
 			startTime = System.nanoTime();
+			
 			g.setColor(Color.WHITE);
 			g.fillRect(0, 0, WIDTH, HEIGHT);
+			
 			if(server == true){
-			for(int j = 0; j < sockets.size(); j++){
-				gameUpdate(sockets.get(j));
-				gameRender();
-			}
-			} else{
-					gameUpdate(socket);
-					gameRender();
-			}
-			for(int i = 0; i < fireballs.size(); i++ ){
-				fireballs.get(i).draw(g);
+				gamePreUpdateServer();
+				for(int j = 0; j < sockets.size(); j++){
+					gameCollectingInfoServer(sockets.get(j));
 				}
-			gameDrow();
-			if(error >= 20){
-				JOptionPane.showMessageDialog(null, "Your opponent has left!");
-				break;
+				clientInfosSend.add(clientInfoSend);
+				for(int j = 0; j < clientInfosSend.size()-1; j++){
+					clientInfosMail = new ArrayList<>();
+					for(int i = 0; i < clientInfosSend.size(); i++){
+						if(i!=j){
+							clientInfosMail.add(clientInfosSend.get(i));
+						}
+					}
+					try {
+						sendMessageServer(sockets.get(j), clientInfosMail);
+						} catch (IOException e){
+							e.printStackTrace();
+							error++;
+							if(error >= 20){
+								try {
+									sockets.get(j).close();
+									sockets.remove(j);
+								} catch (IOException e1) {
+									// TODO Auto-generated catch block
+									e1.printStackTrace();
+								}
+							}
+						}
+				}
+			} else{
+				gamePreUpdateClient(socket);
 			}
+			gameUpdatePart1();
+			for(int i = 0; i < fireballs.size(); i++ ){
+				boolean remove = fireballs.get(i).update();
+				if(remove){
+					fireballs.remove(i);
+					i--;
+				}
+			}
+			gameUpdatePart2();
+			gameRender();
+			
+			gameDrow();
+			
+			//if(error >= 20){
+			//	JOptionPane.showMessageDialog(null, "Your opponent has left!");
+			//	break;
+			//}
 			
 			URDTimeMillis = (System.nanoTime() - startTime) / 1000000;
 			
@@ -207,100 +267,154 @@ public class FirstFrame extends JFrame implements Runnable, KeyListener, MouseLi
 				totalTime = 0;
 			}
 		}
-		//}
 	}
 	
-	private void gameUpdate(Socket s){
+	private void gamePreUpdateServer(){
+		clientInfosSend = new ArrayList<ClientInfo>();
+		clientInfosGet = new ArrayList<ClientInfo>();
 		player.update();
-		myarray[0] = player.getX();
-		myarray[1] = player.getY();
-		myarray[2] = deg;
-		myarray[3] = check;
-		myarray[4] = player.getMultiDetector();
+		clientInfoSend.setX(player.getX());
+		clientInfoSend.setY(player.getY());
+		clientInfoSend.setAngle(deg);
+		clientInfoSend.setCheckShot(check);
+		clientInfoSend.setTeleportDetector(player.getMultiDetector());
+		clientInfoSend.setNickname(nickname);
+		clientInfoSend.setMultiShotCheck(multiShotCheck);
+	}
+	private void gameCollectingInfoServer(Socket s){
 		try {
-			sendMessage(s, myarray);
-			} catch (IOException e){
-				System.out.println("null2");
-				error++;
-			}
-		try {
-			enemyarray = getMessage(s);
+			clientInfoGet = getMessage(s);
 			} catch (IOException e){ 
 				System.out.println("null"); 
 			} catch (ClassNotFoundException e) {
 				System.out.println("noclass");
 			}
-		if((int) enemyarray[3] == 1){
-			long elapsed = (System.nanoTime() - firingTimer) / 1000000;
-			if(elapsed > firingDelay){
-				fireballs.add(new Fireball(enemyarray[2], (int) enemyarray[0], (int) enemyarray[1], Color.RED));
-				firingTimer = System.nanoTime();
+		
+		clientInfosSend.add(clientInfoGet);
+		clientInfosGet.add(clientInfoGet);
+	}
+	
+	private void gamePreUpdateClient(Socket s){
+		clientInfosGet = new ArrayList<ClientInfo>();
+		player.update();
+		clientInfoSend.setX(player.getX());
+		clientInfoSend.setY(player.getY());
+		clientInfoSend.setAngle(deg);
+		clientInfoSend.setCheckShot(check);
+		clientInfoSend.setTeleportDetector(player.getMultiDetector());
+		clientInfoSend.setNickname(nickname);
+		clientInfoSend.setMultiShotCheck(multiShotCheck);
+		try {
+			sendMessage(s, clientInfoSend);
+			} catch (IOException e){
+				e.printStackTrace();
+				error++;
+				if(error >= 20){
+					JOptionPane.showMessageDialog(null, "Disconnected from server!");
+					System.exit(0);
+				}
+			}
+		try {
+			clientInfosGet = getMessageClient(s);
+			} catch (IOException e){ 
+				System.out.println("null"); 
+			} catch (ClassNotFoundException e) {
+				System.out.println("noclass");
 			}
 		}
-		for(int i = 0; i < fireballs.size(); i++ ){
-			boolean remove = fireballs.get(i).update();
-			if(remove){
-				fireballs.remove(i);
-				i--;
+	
+	private void gameUpdatePart1(){
+		
+		for(int j = 0; j < clientInfosGet.size(); j++ ){
+			if((int) clientInfosGet.get(j).getCheckShot() == 1){
+				long elapsed = (System.nanoTime() - firingTimer) / 1000000;
+				if(elapsed > firingDelay){
+					fireballs.add(new Fireball(clientInfosGet.get(j).getAngle(), (int) clientInfosGet.get(j).getX(), (int) clientInfosGet.get(j).getY(), Color.RED));
+					firingTimer = System.nanoTime();
+				}
+			}
+			if(clientInfosGet.get(j).getMultiShotCheck() == 1){
+				long elapsedMultiShot = (System.nanoTime() - multiShotTimer) / 1000000;
+				if(elapsedMultiShot > multiShotDelay){
+					for(int i = 0; i < 20; i++){
+						FirstFrame.fireballs.add(new Fireball(0+i*18, (int) clientInfosGet.get(j).getX(), (int) clientInfosGet.get(j).getY(), Color.RED));
+						multiShotTimer = System.nanoTime();
+					}
+				}
 			}
 		}
-		for(int i = 0; i < fireballs.size(); i++ ){
-			Fireball f = fireballs.get(i);
-			double fx = f.getx();
-			double fy = f.gety();
-			double fr = f.getr();
+	}
+	private void gameUpdatePart2(){
+		
+		for(int j = 0; j < clientInfosGet.size(); j++ ){
+			for(int i = 0; i < fireballs.size(); i++ ){
+				Fireball f = fireballs.get(i);
+				double fx = f.getx();
+				double fy = f.gety();
+				double fr = f.getr();
 			
-			double ex = enemyarray[0];
-			double ey = enemyarray[1];
-			double er = radius;
+				double ex = clientInfosGet.get(j).getX();
+				double ey = clientInfosGet.get(j).getY();
+				double er = radius;
 			
-			double mx = myarray[0];
-			double my = myarray[1];
-			double mr = radius;
+				double mx = clientInfoSend.getX();
+				double my = clientInfoSend.getY();
+				double mr = radius;
 			
-			double dx = fx - ex;
-			double dy = fy - ey;
-			double dist = Math.sqrt(dx*dx + dy*dy);
+				double dx = fx - ex;
+				double dy = fy - ey;
+				double dist = Math.sqrt(dx*dx + dy*dy);
 			
-			double dx2 = fx - mx;
-			double dy2 = fy - my;
-			double dist2 = Math.sqrt(dx2*dx2 + dy2*dy2);
+				double dx2 = fx - mx;
+				double dy2 = fy - my;
+				double dist2 = Math.sqrt(dx2*dx2 + dy2*dy2);
 			
-			if(dist < fr + er){
-				fireballs.remove(i);
-				score++;
-			}
-			if(dist2 < fr + mr){
-				fireballs.remove(i);
-				escore++;
+				if(dist < fr + er){
+					try{
+					fireballs.remove(i);
+					} catch(Exception e){System.out.println("already removed");}
+					score++;
+				}
+				if(dist2 < fr + mr){
+					try{
+					fireballs.remove(i);
+					} catch(Exception e){System.out.println("already removed");}
+					escore++;
+				}
 			}
 		}
-		}
+	}
 	
 	private void gameRender(){
 		//g.setColor(Color.WHITE);
 		//g.fillRect(0, 0, WIDTH, HEIGHT);
 		g.setColor(Color.BLACK);
 		g.drawString("FPS: " + averageFPS, 100, 100);
-		g.drawString("Your score: " + score, 100, 120);
-		g.drawString("Enemy score: " + escore, 100, 140);
+		g.drawString("Your score: kills:" +score + " / deaths: "+escore, 100, 120);
 		
-		player.Draw(g);
-		try {
-			if((int) enemyarray[4] == 0){
-				g.setColor(Color.RED);
-			} else{
-				g.setColor(Color.YELLOW);
-			}
-			g.fillOval((int) enemyarray[0] - radius, (int) enemyarray[1] - radius, 2*radius, 2*radius);
+		player.Draw(g, clientInfoSend.getNickname());
 		
-			g.setStroke(new BasicStroke(3));
-			g.setColor(Color.RED.darker());
-			g.drawOval((int) enemyarray[0] - radius, (int) enemyarray[1] - radius, 2*radius, 2*radius);
-			g.setStroke(new BasicStroke(1));
+		for(int j = 0; j < clientInfosGet.size(); j++ ){
+			try {
+				if((int) clientInfosGet.get(j).getTeleportDetector() == 0){
+					g.setColor(Color.RED);
+				} else{
+					g.setColor(Color.YELLOW);
+				}
+				g.fillOval((int) clientInfosGet.get(j).getX() - radius, (int) clientInfosGet.get(j).getY() - radius, 2*radius, 2*radius);
+		
+				g.setStroke(new BasicStroke(3));
+				g.setColor(Color.RED.darker());
+				g.drawOval((int) clientInfosGet.get(j).getX() - radius, (int) clientInfosGet.get(j).getY() - radius, 2*radius, 2*radius);
+				g.setStroke(new BasicStroke(1));
+				g.setColor(Color.BLACK);
+				g.setFont(new Font("default", Font.BOLD, 16));
+				g.drawString(clientInfosGet.get(j).getNickname(), (int) clientInfosGet.get(j).getX() - (int ) (clientInfosGet.get(j).getNickname().length()*7 / 1.5 ), (int) clientInfosGet.get(j).getY()-2*radius);
+				g.setFont(new Font("default", Font.PLAIN, 11));
 			} catch (Exception e){
 				System.out.println("null2"); 
 			}
+		}
 		for(int i = 0; i < fireballs.size(); i++ ){
 			fireballs.get(i).draw(g);
 		}
@@ -359,6 +473,10 @@ public class FirstFrame extends JFrame implements Runnable, KeyListener, MouseLi
 		if(keyCode == KeyEvent.VK_S){
 			player.setDown(true);
 		}
+		if(keyCode == KeyEvent.VK_E){
+			multiShotCheck = 1;
+			player.setMultiShot(true);
+		}
 	}
 	public void keyReleased(KeyEvent key){
 		int keyCode = key.getKeyCode();
@@ -374,19 +492,37 @@ public class FirstFrame extends JFrame implements Runnable, KeyListener, MouseLi
 		if(keyCode == KeyEvent.VK_S){
 			player.setDown(false);
 		}
+		if(keyCode == KeyEvent.VK_E){
+			multiShotCheck = 0;
+			player.setMultiShot(false);
+		}
 	}
 	
-	public static void sendMessage(Socket s, double[] myMessageArray) throws IOException{
+	public static void sendMessage(Socket s, ClientInfo myMessageArray) throws IOException{
 		OutputStream os = s.getOutputStream();
 		ObjectOutputStream oos = new ObjectOutputStream(new BufferedOutputStream(os));
 		oos.writeObject(myMessageArray);
 		oos.flush();
 	}
 	
-	public static double[] getMessage(Socket s) throws IOException, ClassNotFoundException{
+	public static void sendMessageServer(Socket s, ArrayList<ClientInfo> myMessageArray) throws IOException{
+		OutputStream os = s.getOutputStream();
+		ObjectOutputStream oos = new ObjectOutputStream(new BufferedOutputStream(os));
+		oos.writeObject(myMessageArray);
+		oos.flush();
+	}
+	
+	public static ClientInfo getMessage(Socket s) throws IOException, ClassNotFoundException{
 		InputStream is = s.getInputStream();
 		ObjectInputStream ois = new ObjectInputStream(new BufferedInputStream(is));
-		double[] myMessageArray = (double[]) ois.readObject();
+		ClientInfo myMessageArray = (ClientInfo) ois.readObject();
+		return myMessageArray;
+	}
+	
+	public static ArrayList<ClientInfo> getMessageClient(Socket s) throws IOException, ClassNotFoundException{
+		InputStream is = s.getInputStream();
+		ObjectInputStream ois = new ObjectInputStream(new BufferedInputStream(is));
+		ArrayList<ClientInfo> myMessageArray = (ArrayList<ClientInfo>) ois.readObject();
 		return myMessageArray;
 	}
 	

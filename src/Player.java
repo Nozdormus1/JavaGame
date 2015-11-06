@@ -15,8 +15,11 @@ public class Player {
 	private boolean teleporting;
 	private boolean dead;
 	private boolean cdDetector;
+	private boolean multiShot;
 	private long firingTimer;
 	private long firingDelay;
+	private long multiShotTimer;
+	private long multiShotDelay;
 	private long teleportingTimer;
 	private long teleportingDelay;
 	private long elapsedTele;
@@ -45,8 +48,10 @@ public class Player {
 		color2 = Color.YELLOW;
 		firing = false;
 		teleporting = false;
+		multiShot = false;
 		firingDelay = 200;
 		teleportingDelay = 10000;
+		multiShotDelay = 5000;
 		
 		health = 1;
 		dead = false;
@@ -60,6 +65,7 @@ public class Player {
 	
 	public void setFiring(boolean b){ firing = b;}
 	public void setTeleporting(boolean b){ teleporting = b;}
+	public void setMultiShot(boolean b){multiShot = b;}
 	
 	public void setAngleFromMouse(double a){ angleFromMouse = a;}
 	
@@ -91,6 +97,15 @@ public class Player {
 			if(elapsed > firingDelay){
 				FirstFrame.fireballs.add(new Fireball(angleFromMouse, x, y, Color.BLUE));
 				firingTimer = System.nanoTime();
+			}
+		}
+		if(multiShot) {
+			long elapsedMultiShot = (System.nanoTime() - multiShotTimer) / 1000000;
+			if(elapsedMultiShot > multiShotDelay){
+				for(int i = 0; i < 20; i++){
+					FirstFrame.fireballs.add(new Fireball(0+i*18, x, y, Color.BLUE));
+					multiShotTimer = System.nanoTime();
+				}
 			}
 		}
 		if(teleporting){
@@ -141,7 +156,7 @@ public class Player {
 		return multiDetector;
 	}
 	
-	public void Draw(Graphics2D g){
+	public void Draw(Graphics2D g, String nickname){
 		if(!cdDetector){
 			g.setColor(color1);
 		} else{
@@ -153,5 +168,10 @@ public class Player {
 		g.setColor(color1.darker());
 		g.drawOval(x - r, y - r, 2*r, 2*r);
 		g.setStroke(new BasicStroke(1));
+		g.setColor(Color.BLACK);
+		g.setFont(new Font("default", Font.BOLD, 16));
+		g.drawString(nickname, x - (int ) (nickname.length()*7 / 1.5 ), y-2*r);
+		g.setFont(new Font("default", Font.PLAIN, 16));
+		
 	}
 }
