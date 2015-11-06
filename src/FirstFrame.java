@@ -44,6 +44,7 @@ public class FirstFrame extends JFrame implements Runnable, KeyListener, MouseLi
 	
 	public static Player player;
 	public static ArrayList<Fireball> fireballs;
+	public static ArrayList<Fireball> myFireballs;
 	public static ArrayList<Socket> sockets;
 	private ClientInfo clientInfoSend;
 	private ClientInfo clientInfoGet;
@@ -64,10 +65,11 @@ public class FirstFrame extends JFrame implements Runnable, KeyListener, MouseLi
 	private long multiShotDelay = 5000;
 	private long deathTimer;
 	private long deathDelay = 4000;
-	private int score;
-	private int escore;
+	private int kills;
+	private int deaths;
 	private int radius;
 	private String nickname;
+	private boolean showStats;
 
 
 	/**
@@ -173,6 +175,7 @@ public class FirstFrame extends JFrame implements Runnable, KeyListener, MouseLi
 		
 		player = new Player();
 		fireballs = new ArrayList<Fireball>();
+		myFireballs = new ArrayList<Fireball>();
 		sockets = new ArrayList<Socket>();
 		clientInfoGet = new ClientInfo();
 		clientInfoSend = new ClientInfo();
@@ -184,7 +187,6 @@ public class FirstFrame extends JFrame implements Runnable, KeyListener, MouseLi
 				socket = serverSocket.accept();
 				sockets.add(socket);
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 			(new Thread(new ServerAccept())).start();
@@ -225,7 +227,6 @@ public class FirstFrame extends JFrame implements Runnable, KeyListener, MouseLi
 									sockets.get(j).close();
 									sockets.remove(j);
 								} catch (IOException e1) {
-									// TODO Auto-generated catch block
 									e1.printStackTrace();
 								}
 							}
@@ -235,6 +236,13 @@ public class FirstFrame extends JFrame implements Runnable, KeyListener, MouseLi
 				gamePreUpdateClient(socket);
 			}
 			gameUpdatePart1();
+			for(int i = 0; i < myFireballs.size(); i++ ){
+				boolean remove = myFireballs.get(i).update();
+				if(remove){
+					myFireballs.remove(i);
+					i--;
+				}
+			}
 			for(int i = 0; i < fireballs.size(); i++ ){
 				boolean remove = fireballs.get(i).update();
 				if(remove){
@@ -296,6 +304,8 @@ public class FirstFrame extends JFrame implements Runnable, KeyListener, MouseLi
 		clientInfoSend.setTeleportDetector(player.getMultiDetector());
 		clientInfoSend.setNickname(nickname);
 		clientInfoSend.setMultiShotCheck(multiShotCheck);
+		clientInfoSend.setKills(kills);
+		clientInfoSend.setDeaths(deaths);
 	}
 	private void gameCollectingInfoServer(Socket s){
 		try {
@@ -320,6 +330,8 @@ public class FirstFrame extends JFrame implements Runnable, KeyListener, MouseLi
 		clientInfoSend.setTeleportDetector(player.getMultiDetector());
 		clientInfoSend.setNickname(nickname);
 		clientInfoSend.setMultiShotCheck(multiShotCheck);
+		clientInfoSend.setKills(kills);
+		clientInfoSend.setDeaths(deaths);
 		try {
 			sendMessage(s, clientInfoSend);
 			} catch (IOException e){
@@ -352,7 +364,7 @@ public class FirstFrame extends JFrame implements Runnable, KeyListener, MouseLi
 				long elapsedMultiShot = (System.nanoTime() - multiShotTimer) / 1000000;
 				if(elapsedMultiShot > multiShotDelay){
 					for(int i = 0; i < 20; i++){
-						FirstFrame.fireballs.add(new Fireball(0+i*18, (int) clientInfosGet.get(j).getX(), (int) clientInfosGet.get(j).getY(), Color.RED));
+						fireballs.add(new Fireball(0+i*18, (int) clientInfosGet.get(j).getX(), (int) clientInfosGet.get(j).getY(), Color.RED));
 						multiShotTimer = System.nanoTime();
 					}
 				}
@@ -362,6 +374,29 @@ public class FirstFrame extends JFrame implements Runnable, KeyListener, MouseLi
 	private void gameUpdatePart2(){
 		
 		for(int j = 0; j < clientInfosGet.size(); j++ ){
+			for(int i = 0; i < myFireballs.size(); i++ ){
+				Fireball f = myFireballs.get(i);
+				double fx = f.getx();
+				double fy = f.gety();
+				double fr = f.getr();
+		
+				double ex = clientInfosGet.get(j).getX();
+				double ey = clientInfosGet.get(j).getY();
+				double er = radius;
+		
+				double dx = fx - ex;
+				double dy = fy - ey;
+				double dist = Math.sqrt(dx*dx + dy*dy);
+		
+		
+				if(dist < fr + er){
+					try{
+						myFireballs.remove(i);
+					} catch(Exception e){System.out.println("already removed");}
+					kills++;
+					clientInfosGet.get(j).setDead(true);
+				}
+			}
 			if(clientInfosGet.get(j).isDead() == false){
 				for(int i = 0; i < fireballs.size(); i++ ){
 					Fireball f = fireballs.get(i);
@@ -389,7 +424,6 @@ public class FirstFrame extends JFrame implements Runnable, KeyListener, MouseLi
 						try{
 							fireballs.remove(i);
 						} catch(Exception e){System.out.println("already removed");}
-						score++;
 						clientInfosGet.get(j).setDead(true);
 					}
 					if(clientInfoSend.isDead() == false){
@@ -397,7 +431,7 @@ public class FirstFrame extends JFrame implements Runnable, KeyListener, MouseLi
 							try{
 								fireballs.remove(i);
 							} catch(Exception e){System.out.println("already removed");}
-							escore++;
+							deaths++;
 							clientInfoSend.setDead(true);
 							deathTimer = System.nanoTime();
 						}
@@ -413,7 +447,12 @@ public class FirstFrame extends JFrame implements Runnable, KeyListener, MouseLi
 		g.setColor(Color.BLACK);
 		g.setFont(new Font("default", Font.PLAIN, 11));
 		g.drawString("FPS: " + averageFPS, 100, 100);
-		g.drawString("Your score: kills:" +score + " / deaths: "+escore, 100, 120);
+		g.drawString("Your score: kills:" +kills + " / deaths: "+deaths, 100, 120);
+		if(showStats){
+			for(int j = 0; j < clientInfosGet.size(); j++ ){
+			g.drawString(clientInfosGet.get(j).getNickname()+" score: kills:"+ clientInfosGet.get(j).getKills() + " / deaths: "+clientInfosGet.get(j).getDeaths() , 100, 140+j*20);
+			}
+		}
 		
 		if(clientInfoSend.isDead() == false){
 			player.Draw(g, clientInfoSend.getNickname());
@@ -441,6 +480,9 @@ public class FirstFrame extends JFrame implements Runnable, KeyListener, MouseLi
 			} catch (Exception e){
 				System.out.println("null2"); 
 			}
+		}
+		for(int i = 0; i < myFireballs.size(); i++ ){
+			myFireballs.get(i).draw(g);
 		}
 		for(int i = 0; i < fireballs.size(); i++ ){
 			fireballs.get(i).draw(g);
@@ -508,6 +550,9 @@ public class FirstFrame extends JFrame implements Runnable, KeyListener, MouseLi
 				player.setMultiShot(true);
 			}
 		}
+		if(keyCode == KeyEvent.VK_Q){
+			showStats = true;
+		}
 	}
 	public void keyReleased(KeyEvent key){
 		int keyCode = key.getKeyCode();
@@ -526,6 +571,9 @@ public class FirstFrame extends JFrame implements Runnable, KeyListener, MouseLi
 		if(keyCode == KeyEvent.VK_E){
 			multiShotCheck = 0;
 			player.setMultiShot(false);
+		}
+		if(keyCode == KeyEvent.VK_Q){
+			showStats = false;
 		}
 	}
 	

@@ -95,7 +95,7 @@ public class Player {
 		if(firing) {
 			long elapsed = (System.nanoTime() - firingTimer) / 1000000;
 			if(elapsed > firingDelay){
-				FirstFrame.fireballs.add(new Fireball(angleFromMouse, x, y, Color.BLUE));
+				FirstFrame.myFireballs.add(new Fireball(angleFromMouse, x, y, Color.BLUE));
 				firingTimer = System.nanoTime();
 			}
 		}
@@ -103,7 +103,7 @@ public class Player {
 			long elapsedMultiShot = (System.nanoTime() - multiShotTimer) / 1000000;
 			if(elapsedMultiShot > multiShotDelay){
 				for(int i = 0; i < 20; i++){
-					FirstFrame.fireballs.add(new Fireball(0+i*18, x, y, Color.BLUE));
+					FirstFrame.myFireballs.add(new Fireball(0+i*18, x, y, Color.BLUE));
 					multiShotTimer = System.nanoTime();
 				}
 			}
