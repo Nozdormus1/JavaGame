@@ -8,6 +8,7 @@ public class ClientInfo implements Serializable {
 	private double teleportDetector = 0;
 	private String nickname;
 	private int multiShotCheck;
+	private boolean dead;
 	
 	public double getTeleportDetector() {
 		return teleportDetector;
@@ -50,6 +51,12 @@ public class ClientInfo implements Serializable {
 	}
 	public void setMultiShotCheck(int multiShotCheck) {
 		this.multiShotCheck = multiShotCheck;
+	}
+	public boolean isDead() {
+		return dead;
+	}
+	public void setDead(boolean dead) {
+		this.dead = dead;
 	}
 	
 }

@@ -62,6 +62,8 @@ public class FirstFrame extends JFrame implements Runnable, KeyListener, MouseLi
 	private long firingDelay = 200;
 	private long multiShotTimer = System.nanoTime();
 	private long multiShotDelay = 5000;
+	private long deathTimer;
+	private long deathDelay = 4000;
 	private int score;
 	private int escore;
 	private int radius;
@@ -249,6 +251,14 @@ public class FirstFrame extends JFrame implements Runnable, KeyListener, MouseLi
 			//	JOptionPane.showMessageDialog(null, "Your opponent has left!");
 			//	break;
 			//}
+			if(clientInfoSend.isDead()) {
+				long elapsedDeath = (System.nanoTime() - deathTimer) / 1000000;
+				if(elapsedDeath > deathDelay){
+					clientInfoSend.setDead(false);
+					deathTimer = System.nanoTime();
+				}
+			}
+			
 			
 			URDTimeMillis = (System.nanoTime() - startTime) / 1000000;
 			
@@ -347,39 +357,46 @@ public class FirstFrame extends JFrame implements Runnable, KeyListener, MouseLi
 	private void gameUpdatePart2(){
 		
 		for(int j = 0; j < clientInfosGet.size(); j++ ){
-			for(int i = 0; i < fireballs.size(); i++ ){
-				Fireball f = fireballs.get(i);
-				double fx = f.getx();
-				double fy = f.gety();
-				double fr = f.getr();
+			if(clientInfosGet.get(j).isDead() == false){
+				for(int i = 0; i < fireballs.size(); i++ ){
+					Fireball f = fireballs.get(i);
+					double fx = f.getx();
+					double fy = f.gety();
+					double fr = f.getr();
 			
-				double ex = clientInfosGet.get(j).getX();
-				double ey = clientInfosGet.get(j).getY();
-				double er = radius;
+					double ex = clientInfosGet.get(j).getX();
+					double ey = clientInfosGet.get(j).getY();
+					double er = radius;
 			
-				double mx = clientInfoSend.getX();
-				double my = clientInfoSend.getY();
-				double mr = radius;
+					double mx = clientInfoSend.getX();
+					double my = clientInfoSend.getY();
+					double mr = radius;
 			
-				double dx = fx - ex;
-				double dy = fy - ey;
-				double dist = Math.sqrt(dx*dx + dy*dy);
+					double dx = fx - ex;
+					double dy = fy - ey;
+					double dist = Math.sqrt(dx*dx + dy*dy);
 			
-				double dx2 = fx - mx;
-				double dy2 = fy - my;
-				double dist2 = Math.sqrt(dx2*dx2 + dy2*dy2);
+					double dx2 = fx - mx;
+					double dy2 = fy - my;
+					double dist2 = Math.sqrt(dx2*dx2 + dy2*dy2);
 			
-				if(dist < fr + er){
-					try{
-					fireballs.remove(i);
-					} catch(Exception e){System.out.println("already removed");}
-					score++;
-				}
-				if(dist2 < fr + mr){
-					try{
-					fireballs.remove(i);
-					} catch(Exception e){System.out.println("already removed");}
-					escore++;
+					if(dist < fr + er){
+						try{
+							fireballs.remove(i);
+						} catch(Exception e){System.out.println("already removed");}
+						score++;
+						clientInfosGet.get(j).setDead(true);
+					}
+					if(clientInfoSend.isDead() == false){
+						if(dist2 < fr + mr){
+							try{
+								fireballs.remove(i);
+							} catch(Exception e){System.out.println("already removed");}
+							escore++;
+							clientInfoSend.setDead(true);
+							deathTimer = System.nanoTime();
+						}
+					}
 				}
 			}
 		}
@@ -389,28 +406,33 @@ public class FirstFrame extends JFrame implements Runnable, KeyListener, MouseLi
 		//g.setColor(Color.WHITE);
 		//g.fillRect(0, 0, WIDTH, HEIGHT);
 		g.setColor(Color.BLACK);
+		g.setFont(new Font("default", Font.PLAIN, 11));
 		g.drawString("FPS: " + averageFPS, 100, 100);
 		g.drawString("Your score: kills:" +score + " / deaths: "+escore, 100, 120);
 		
-		player.Draw(g, clientInfoSend.getNickname());
+		if(clientInfoSend.isDead() == false){
+			player.Draw(g, clientInfoSend.getNickname());
+		}
 		
 		for(int j = 0; j < clientInfosGet.size(); j++ ){
 			try {
-				if((int) clientInfosGet.get(j).getTeleportDetector() == 0){
-					g.setColor(Color.RED);
-				} else{
-					g.setColor(Color.YELLOW);
-				}
-				g.fillOval((int) clientInfosGet.get(j).getX() - radius, (int) clientInfosGet.get(j).getY() - radius, 2*radius, 2*radius);
+				if(clientInfosGet.get(j).isDead() == false){
+					if((int) clientInfosGet.get(j).getTeleportDetector() == 0){
+						g.setColor(Color.RED);
+					} else{
+						g.setColor(Color.YELLOW);
+					}
+					g.fillOval((int) clientInfosGet.get(j).getX() - radius, (int) clientInfosGet.get(j).getY() - radius, 2*radius, 2*radius);
 		
-				g.setStroke(new BasicStroke(3));
-				g.setColor(Color.RED.darker());
-				g.drawOval((int) clientInfosGet.get(j).getX() - radius, (int) clientInfosGet.get(j).getY() - radius, 2*radius, 2*radius);
-				g.setStroke(new BasicStroke(1));
-				g.setColor(Color.BLACK);
-				g.setFont(new Font("default", Font.BOLD, 16));
-				g.drawString(clientInfosGet.get(j).getNickname(), (int) clientInfosGet.get(j).getX() - (int ) (clientInfosGet.get(j).getNickname().length()*7 / 1.5 ), (int) clientInfosGet.get(j).getY()-2*radius);
-				g.setFont(new Font("default", Font.PLAIN, 11));
+					g.setStroke(new BasicStroke(3));
+					g.setColor(Color.RED.darker());
+					g.drawOval((int) clientInfosGet.get(j).getX() - radius, (int) clientInfosGet.get(j).getY() - radius, 2*radius, 2*radius);
+					g.setStroke(new BasicStroke(1));
+					g.setColor(Color.BLACK);
+					g.setFont(new Font("default", Font.BOLD, 16));
+					g.drawString(clientInfosGet.get(j).getNickname(), (int) clientInfosGet.get(j).getX() - (int ) (clientInfosGet.get(j).getNickname().length()*7 / 1.5 ), (int) clientInfosGet.get(j).getY()-2*radius);
+					g.setFont(new Font("default", Font.PLAIN, 11));
+				}
 			} catch (Exception e){
 				System.out.println("null2"); 
 			}
@@ -429,23 +451,25 @@ public class FirstFrame extends JFrame implements Runnable, KeyListener, MouseLi
 		
 	}
 	public void mousePressed(MouseEvent key){
-		int keyCode = key.getButton();
-		if(keyCode == MouseEvent.BUTTON1){
-			int x = (int) key.getPoint().getX();
-			int y = (int) key.getPoint().getY();
-			int dx = x - player.getX();
-			int dy = y - player.getY();
-			double rad = Math.atan2(dy, dx);
-			deg = Math.toDegrees(rad);
-			if (deg < 0){ deg += 360; }
-			player.setAngleFromMouse(deg);
-			check = 1;
-			player.setFiring(true);
-		}
-		if(keyCode == MouseEvent.BUTTON3){
-			mouseX = (int) key.getPoint().getX();
-			mouseY = (int) key.getPoint().getY();
-			player.setTeleporting(true);
+		if(clientInfoSend.isDead() == false){
+			int keyCode = key.getButton();
+			if(keyCode == MouseEvent.BUTTON1){
+				int x = (int) key.getPoint().getX();
+				int y = (int) key.getPoint().getY();
+				int dx = x - player.getX();
+				int dy = y - player.getY();
+				double rad = Math.atan2(dy, dx);
+				deg = Math.toDegrees(rad);
+				if (deg < 0){ deg += 360; }
+				player.setAngleFromMouse(deg);
+				check = 1;
+				player.setFiring(true);
+			}
+			if(keyCode == MouseEvent.BUTTON3){
+				mouseX = (int) key.getPoint().getX();
+				mouseY = (int) key.getPoint().getY();
+				player.setTeleporting(true);
+			}
 		}
 	}
 	public void mouseReleased(MouseEvent key){
@@ -473,9 +497,11 @@ public class FirstFrame extends JFrame implements Runnable, KeyListener, MouseLi
 		if(keyCode == KeyEvent.VK_S){
 			player.setDown(true);
 		}
-		if(keyCode == KeyEvent.VK_E){
-			multiShotCheck = 1;
-			player.setMultiShot(true);
+		if(clientInfoSend.isDead() == false){
+			if(keyCode == KeyEvent.VK_E){
+				multiShotCheck = 1;
+				player.setMultiShot(true);
+			}
 		}
 	}
 	public void keyReleased(KeyEvent key){
